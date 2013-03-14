@@ -1,0 +1,6 @@
+doc/*
+*.o
+*.a
+.build/*
+ino.ini
+lib/.holder
