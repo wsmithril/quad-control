@@ -6,6 +6,7 @@
 class BMP085 {
 private:
     static const uint8_t I2C_ADDRESS = 0x77;
+    static const int32_t p0 = 101325;
 
     static void i2c_write(uint8_t addr, uint8_t data) {
         Wire.beginTransmission(I2C_ADDRESS);
@@ -111,7 +112,7 @@ next:
     }
 
     // THE TYPE CONVERSION ISKILLING ME!!!!!!!!!!!!!!!
-    int calculate(float * temp, uint32_t * presure) {
+    int read_raw(int32_t * temp, int32_t * presure) {
         if (state != Ready) return state;
 
         int32_t X1, X2, X3, b3, b5, b6, b7, P;
@@ -120,7 +121,7 @@ next:
         X1 = ((reading.ut - ac6) * ac5) >> 15;
         X2 = ((int32_t)mc << 11) / (X1 + md);
         b5 = X1 + X2;
-        *temp = ((b5 + 8) >> 4) / 10.0;
+        *temp = ((b5 + 8) >> 4);
         b6 = b5 - 4000;
         X1 = ((int32_t)b2 * ((b6 * b6) >> 12)) >> 11;
         X2 = (ac2 * b6) >> 11;
@@ -138,9 +139,24 @@ next:
         *presure = P + ((X1 + X2 + 3791) >> 4);
     }
 
-    static float altitude(uint32_t pressure, float t) {
-        static const uint32_t p0 = 101325;
+    static void scale(int32_t tin, int32_t pin, float * t, float * p) {
+        *p = pin / 1.0;
+        *t = tin / 10.0;
+    }
+
+    void read_scale(float * t, float * p) {
+        int32_t rt, rp;
+        read_raw(&rt, &rp);
+        scale(rt, rp, t, p);
+    }
+
+    static float altitude(int32_t t, int32_t p) {
+        float p1 = p * (2371.5 + 150) / (2371.5 + t);
+        return 44330 * (1 - pow(p / p1, (1 / 5.255)));
+    }
+
+    static float altitude(float t, float p) {
         float p1 = p0 / (237.15 + 15) * (237.15 + t);
-        return 44330 * (1 - pow(1.0 * pressure / p1, (1.0 / 5.255)));
+        return 44330 * (1 - pow(p / p1, (1 / 5.255)));
     }
 };

@@ -147,21 +147,25 @@ public:
         uint8_t buffer[6], i = 0;
         i2c_read(ADDR_X_MSB, buffer, 6);
 
-        *x = (buffer[0] << 8) + buffer[1];
-        *z = (buffer[2] << 8) + buffer[3];
-        *y = (buffer[4] << 8) + buffer[5];
+        *x = ((int16_t)buffer[0] << 8) + buffer[1];
+        *z = ((int16_t)buffer[2] << 8) + buffer[3];
+        *y = ((int16_t)buffer[4] << 8) + buffer[5];
         return 0;
     }
 
-    int read_scaled(float * x, float * y, float * z) {
+    int scale(int16_t x,  int16_t y,  int16_t z,
+              float * ox, float * oy, float * oz) {
         static const float scale[] = {0.88, 1.3, 1.9, 2.5, 4.0, 4.7, 5.6, 8.1};
         float factor = scale[gain];
-        int16_t rx, ry, rz;
+        *ox = x == -4096? 0: x * factor / 2048;
+        *oy = y == -4096? 0: y * factor / 2048;
+        *oz = z == -4096? 0: z * factor / 2048;
+    }
 
+    int read_scaled(float * x, float * y, float * z) {
+        int16_t rx, ry, rz;
         read_raw(&rx, &ry, &rz);
-        *x = rx == -4096? 0: rx * factor / 2048;
-        *y = ry == -4096? 0: ry * factor / 2048;
-        *z = rz == -4096? 0: rz * factor / 2048;
+        scale(rx, ry ,rz, x, y, z);
         return 0;
     }
 };
